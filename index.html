@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="calendar"/>
+<meta name="theme-color" content="#5090c0"/>
+<link rel="manifest" href="manifest.json"/>
+<link rel="apple-touch-icon" href="apple-touch-icon.png"/>
+<title>カレンダー 2026</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif}
+#app{position:relative;padding:10px 8px 12px;min-height:100svh;overflow:hidden;background:#fff}
+#bg-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}
+#bg-color{position:absolute;inset:0;background:#fff}
+.inner{position:relative;z-index:2}
+.nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.month-title{font-size:16px;font-weight:600;color:#1e4060;letter-spacing:0.07em;text-shadow:0 1px 3px rgba(255,255,255,0.8)}
+.nav-btn{
+  background:#5090c0;
+  border:none;
+  border-radius:20px;
+  padding:6px 18px;
+  font-size:13px;
+  font-weight:600;
+  cursor:pointer;
+  color:#fff;
+  box-shadow:0 2px 8px rgba(50,110,170,0.35);
+  letter-spacing:0.03em;
+}
+.nav-btn:hover{background:#3a78b0}
+.nav-btn:active{background:#2d6090;transform:scale(0.97)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2.5px}
+.day-label{text-align:center;font-size:10px;font-weight:500;padding:3px 0;color:#3a6888;text-shadow:0 1px 2px rgba(255,255,255,0.7)}
+.day-label:nth-child(1){color:#b05878}
+.day-label:nth-child(7){color:#3868a8}
+.day-cell{border:0.5px solid rgba(160,200,235,0.4);border-radius:7px;min-height:62px;padding:3px 3px 2px;cursor:pointer;background:rgba(255,255,255,0.48);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);transition:background 0.12s}
+.day-cell:hover{background:rgba(255,255,255,0.72)}
+.day-cell.empty{background:none;border-color:transparent;cursor:default}
+.day-cell.today .day-num{background:#5090c0;color:#fff;border-radius:50%}
+.day-num{font-size:11px;font-weight:500;width:18px;height:18px;display:flex;align-items:center;justify-content:center;margin-bottom:1px;color:#1e4060}
+.day-num.sun{color:#b05878}
+.day-num.sat{color:#3868a8}
+.evt{font-size:9px;line-height:1.4;word-break:break-all}
+.evt.c-black{color:#1e3a55}
+.evt.c-blue{color:#0c447c}
+.evt.c-pink{color:#993556}
+.evt.c-green{color:#27500a}
+.more{font-size:9px;color:#7aaac8}
+.bottom-row{display:flex;gap:6px;margin-top:7px;align-items:stretch}
+.bg-controls{display:flex;flex-direction:column;gap:5px}
+.bg-icon-btn{background:rgba(255,255,255,0.45);border:0.5px solid rgba(160,200,235,0.45);border-radius:10px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);transition:background 0.12s}
+.bg-icon-btn:hover{background:rgba(255,255,255,0.8)}
+#bg-file{display:none}
+.memo-wrap{flex:1;display:flex;flex-direction:column}
+.memo-label{font-size:10px;color:#3a6888;margin-bottom:3px;text-shadow:0 1px 2px rgba(255,255,255,0.8)}
+.memo{width:100%;flex:1;min-height:88px;resize:none;border:0.5px solid rgba(160,200,235,0.45);border-radius:10px;padding:6px 8px;font-size:11px;line-height:1.6;background:rgba(255,255,255,0.52);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);color:#1e3a55;font-family:inherit}
+.memo:focus{outline:none;background:rgba(255,255,255,0.72)}
+/* modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(30,80,120,0.22);display:flex;align-items:center;justify-content:center;z-index:20;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.modal{background:rgba(228,242,254,0.97);border-radius:16px;border:0.5px solid rgba(140,195,235,0.6);padding:16px;width:268px;max-height:75vh;overflow-y:auto}
+.modal-title{font-size:14px;font-weight:500;margin-bottom:10px;color:#1e4060}
+.evt-list{list-style:none;margin-bottom:8px}
+.evt-item{display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid rgba(140,195,235,0.3);font-size:12px}
+.del-btn{background:none;border:none;cursor:pointer;color:#80aac5;font-size:13px;padding:0 4px}
+.del-btn:hover{color:#b05878}
+.add-row{display:flex;gap:5px;margin-bottom:7px}
+.add-input{flex:1;font-size:12px;padding:5px 8px;border:0.5px solid rgba(140,195,235,0.5);border-radius:10px;background:rgba(255,255,255,0.8);color:#1e4060}
+.add-btn{white-space:nowrap;background:rgba(90,160,210,0.22);border:0.5px solid rgba(90,160,210,0.5);border-radius:10px;padding:5px 10px;font-size:12px;cursor:pointer;color:#1e4060}
+.add-btn:hover{background:rgba(90,160,210,0.42)}
+.color-btns{display:flex;gap:6px;margin-bottom:10px;align-items:center}
+.color-label{font-size:11px;color:#4a7898;margin-right:2px}
+.color-btn{width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer}
+.color-btn.sel{border-color:#1e4060}
+.modal-close{display:block;width:100%;border:0.5px solid rgba(140,195,235,0.5);background:rgba(255,255,255,0.4);border-radius:10px;padding:6px;font-size:12px;cursor:pointer;color:#2a5070}
+.modal-close:hover{background:rgba(255,255,255,0.65)}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="bg-color"></div>
+  <img id="bg-img" alt=""/>
+  <div class="inner">
+    <div class="nav">
+      <button class="nav-btn" id="prev">‹ 前の月</button>
+      <span class="month-title" id="month-title"></span>
+      <button class="nav-btn" id="next">次の月 ›</button>
+    </div>
+    <div id="cal-wrapper">
+      <div class="cal-grid" id="cal"></div>
+    </div>
+    <div class="bottom-row">
+      <div class="bg-controls">
+        <button class="bg-icon-btn" id="bg-upload-btn" title="背景を変更">🖼</button>
+        <button class="bg-icon-btn" id="bg-reset-btn" title="背景をリセット">✕</button>
+        <input type="file" id="bg-file" accept="image/*"/>
+      </div>
+      <div class="memo-wrap">
+        <div class="memo-label">📝 メモ</div>
+        <textarea class="memo" id="memo" placeholder="ここにメモを書けます…"></textarea>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const MONTHS_JP=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+const DAYS=['日','月','火','水','木','金','土'];
+const START=5,END=11;
+let cur=5;
+let schedules=JSON.parse(localStorage.getItem('cal2026f')||'{}');
+let selColor='c-black',selDate=null;
+const save=()=>localStorage.setItem('cal2026f',JSON.stringify(schedules));
+const key=(y,m,d)=>`${y}-${m+1}-${d}`;
+
+// メモ
+const memoEl=document.getElementById('memo');
+memoEl.value=localStorage.getItem('cal2026memo')||'';
+memoEl.addEventListener('input',()=>localStorage.setItem('cal2026memo',memoEl.value));
+
+// 背景
+const bgImg=document.getElementById('bg-img');
+const bgColor=document.getElementById('bg-color');
+const savedBg=localStorage.getItem('cal2026bg');
+if(savedBg){bgImg.src=savedBg;bgImg.style.display='block';bgColor.style.display='none';}
+document.getElementById('bg-upload-btn').onclick=()=>document.getElementById('bg-file').click();
+document.getElementById('bg-file').onchange=(e)=>{
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=(ev)=>{
+    const data=ev.target.result;
+    bgImg.src=data;bgImg.style.display='block';bgColor.style.display='none';
+    try{localStorage.setItem('cal2026bg',data);}catch(err){alert('画像が大きすぎて保存できませんでした');}
+  };
+  reader.readAsDataURL(file);
+};
+document.getElementById('bg-reset-btn').onclick=()=>{
+  bgImg.src='';bgImg.style.display='none';bgColor.style.display='block';
+  localStorage.removeItem('cal2026bg');
+};
+
+function render(){
+  const y=2026,m=cur;
+  document.getElementById('month-title').textContent=`2026 · ${MONTHS_JP[m]}`;
+  document.getElementById('prev').disabled=cur<=START;
+  document.getElementById('next').disabled=cur>=END;
+  const first=new Date(y,m,1).getDay();
+  const days=new Date(y,m+1,0).getDate();
+  const today=new Date();
+  const isToday=(d)=>today.getFullYear()===y&&today.getMonth()===m&&today.getDate()===d;
+  let html=DAYS.map(d=>`<div class="day-label">${d}</div>`).join('');
+  for(let i=0;i<first;i++) html+=`<div class="day-cell empty"></div>`;
+  for(let d=1;d<=days;d++){
+    const dow=(first+d-1)%7;
+    const k=key(y,m,d);
+    const evts=schedules[k]||[];
+    const cls=isToday(d)?'today':'';
+    const nc=dow===0?'sun':dow===6?'sat':'';
+    const evtHtml=evts.slice(0,2).map(e=>`<div class="evt ${e.color}">・${e.text}</div>`).join('');
+    const more=evts.length>2?`<div class="more">+${evts.length-2}</div>`:'';
+    html+=`<div class="day-cell ${cls}" data-date="${k}"><div class="day-num ${nc}">${d}</div>${evtHtml}${more}</div>`;
+  }
+  const cal=document.getElementById('cal');
+  cal.innerHTML=html;
+  cal.querySelectorAll('.day-cell:not(.empty)').forEach(el=>{
+    el.addEventListener('click',()=>openModal(el.dataset.date));
+  });
+}
+
+function openModal(k){
+  selDate=k;selColor='c-black';closeModal();
+  const [y,m,d]=k.split('-');
+  const evts=schedules[k]||[];
+  const evtItems=evts.map((e,i)=>`<li class="evt-item"><span class="evt ${e.color}">${e.text}</span><button class="del-btn" data-idx="${i}">×</button></li>`).join('');
+  const colors=[['c-black','#1e3a55'],['c-blue','#0c447c'],['c-pink','#993556'],['c-green','#27500a']];
+  const colorBtns=colors.map(([c,hex])=>`<button class="color-btn ${c==='c-black'?'sel':''}" data-color="${c}" style="background:${hex}"></button>`).join('');
+  const div=document.createElement('div');
+  div.className='modal-overlay';div.id='modal-overlay';
+  div.innerHTML=`<div class="modal"><div class="modal-title">${y}年${m}月${d}日</div><ul class="evt-list" id="evt-list">${evtItems}</ul><div class="add-row"><input class="add-input" id="evt-input" placeholder="予定を追加…" maxlength="28"/><button class="add-btn" id="add-btn">追加</button></div><div class="color-btns"><span class="color-label">色</span>${colorBtns}</div><button class="modal-close" id="modal-close">閉じる</button></div>`;
+  document.body.appendChild(div);
+  div.querySelector('#modal-close').onclick=closeModal;
+  div.querySelector('#add-btn').onclick=addEvt;
+  div.querySelector('#evt-input').addEventListener('keydown',e=>{if(e.key==='Enter')addEvt()});
+  div.querySelectorAll('.color-btn').forEach(b=>{
+    b.onclick=()=>{selColor=b.dataset.color;div.querySelectorAll('.color-btn').forEach(x=>x.classList.remove('sel'));b.classList.add('sel')};
+  });
+  refreshEvtList(div);
+  div.addEventListener('click',e=>{if(e.target===div)closeModal()});
+  div.querySelector('#evt-input').focus();
+}
+
+function refreshEvtList(container){
+  container=container||document.getElementById('modal-overlay');
+  if(!container)return;
+  const k=selDate;
+  const evts=schedules[k]||[];
+  const ul=container.querySelector('#evt-list');
+  if(!ul)return;
+  ul.innerHTML=evts.map((e,i)=>`<li class="evt-item"><span class="evt ${e.color}">${e.text}</span><button class="del-btn" data-idx="${i}">×</button></li>`).join('');
+  ul.querySelectorAll('.del-btn').forEach(b=>{
+    b.onclick=()=>{schedules[k]=schedules[k].filter((_,i)=>i!=b.dataset.idx);save();refreshEvtList();render()};
+  });
+}
+
+function addEvt(){
+  const inp=document.getElementById('evt-input');
+  const txt=inp.value.trim();if(!txt)return;
+  if(!schedules[selDate])schedules[selDate]=[];
+  schedules[selDate].push({text:txt,color:selColor});
+  save();inp.value='';refreshEvtList();render();
+}
+function closeModal(){const o=document.getElementById('modal-overlay');if(o)o.remove();}
+
+document.getElementById('prev').onclick=()=>{if(cur>START){cur--;render()}};
+document.getElementById('next').onclick=()=>{if(cur<END){cur++;render()}};
+render();
+
+// PWA Service Worker
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js'));
+}
+</script>
+</body>
+</html>
