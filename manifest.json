@@ -1,7 +1,7 @@
 {
-  "name": "カレンダー 2026",
+  "name": "カレンダー",
   "short_name": "calendar",
-  "description": "2026年6〜12月のスケジュール帳",
+  "description": "スケジュール帳",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#ffffff",
